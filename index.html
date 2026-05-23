@@ -971,7 +971,13 @@
             const wasDead = hitTank.dead; hitTank.damage(15);
             if (!wasDead && hitTank.dead && hitTank !== player) {
                 const oldRankIndex = getRankIndex();
-                score += 15; scoreVal.textContent = score; player.hp = Math.min(100, player.hp + 20);
+                score += 15; scoreVal.textContent = score;
+                player.hp = 100;
+                player.ammo = player.maxAmmo;
+                burst(player.x, player.y, 18, '#22c55e', 170);
+                burst(player.x, player.y, 16, '#facc15', 190);
+                playTone(520, 0.08, 'sine', 0.05);
+                setTimeout(() => playTone(760, 0.10, 'sine', 0.05), 80);
                 if (getRankIndex() > oldRankIndex) {
                   const rank = getCurrentRank();
                   burst(player.x, player.y - 34, 24, '#facc15', 190);
@@ -1034,57 +1040,179 @@
       function drawTank(t) {
         if (t.dead) return;
         const isPlayer = t.label === 'PLAYER';
-        const baseColor = isPlayer ? '#15803d' : '#991b1b'; 
-        const lightColor = isPlayer ? '#22c55e' : '#ef4444'; 
-        const darkColor = isPlayer ? '#14532d' : '#7f1d1d'; 
+        const palette = isPlayer
+          ? {
+              base: '#166534', light: '#4ade80', mid: '#15803d', dark: '#052e16',
+              armor: '#1f7a3a', trim: '#bbf7d0', track: '#111827', wheel: '#334155', emblem: '#facc15'
+            }
+          : {
+              base: '#7f1d1d', light: '#f87171', mid: '#b91c1c', dark: '#450a0a',
+              armor: '#991b1b', trim: '#fecaca', track: '#111827', wheel: '#334155', emblem: '#fca5a5'
+            };
 
-        ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle);
-
-        ctx.fillStyle = 'rgba(0,0,0,0.4)'; roundRect(-35, -28, 70, 56, 8, true, false);
-
-        ctx.fillStyle = '#1e293b';
-        roundRect(-34, -26, 68, 14, 4, true, false); 
-        roundRect(-34, 12, 68, 14, 4, true, false);  
-        
-        ctx.fillStyle = '#020617';
-        let trackOffset = (t.trackDist * 0.5) % 6; 
-        for(let i = -30; i <= 30; i += 6) {
-            let drawX = i - trackOffset;
-            if(drawX < -32 || drawX > 32) continue; 
-            ctx.fillRect(drawX, -26, 3, 14); ctx.fillRect(drawX, 12, 3, 14);
-        }
-
-        const hullGrad = ctx.createLinearGradient(-30, -18, 30, 18);
-        hullGrad.addColorStop(0, lightColor); hullGrad.addColorStop(1, darkColor);
-        ctx.fillStyle = hullGrad; ctx.strokeStyle = '#020617'; ctx.lineWidth = 2;
-
+        // Bayangan lembut agar tank tampak menempel pada tanah.
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.angle);
+        ctx.fillStyle = 'rgba(0,0,0,0.34)';
         ctx.beginPath();
-        ctx.moveTo(-32, -18); ctx.lineTo(20, -18); ctx.lineTo(32, -10); ctx.lineTo(32, 10); ctx.lineTo(20, 18); ctx.lineTo(-32, 18);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-
-        ctx.fillStyle = '#0f172a'; ctx.fillRect(-28, -12, 14, 24);
-        ctx.fillStyle = '#334155'; for(let i = -10; i <= 10; i += 3) { ctx.fillRect(-27, i, 12, 1.5); }
-        ctx.beginPath(); ctx.moveTo(15, -18); ctx.lineTo(15, 18); ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke();
+        ctx.ellipse(0, 8, 44, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
 
-        ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.turretAngle); ctx.translate(-t.recoil, 0);
+        // Badan dan rantai tank.
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.angle);
 
-        const barrelGrad = ctx.createLinearGradient(0, -4, 0, 4);
-        barrelGrad.addColorStop(0, '#64748b'); barrelGrad.addColorStop(0.5, '#cbd5e1'); barrelGrad.addColorStop(1, '#334155');
-        ctx.fillStyle = barrelGrad; ctx.fillRect(15, -3, 35, 6);
-        ctx.fillStyle = darkColor; ctx.fillRect(25, -4.5, 12, 9); ctx.strokeRect(25, -4.5, 12, 9);
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(48, -4, 5, 8);
+        const trackGrad = ctx.createLinearGradient(-38, -31, 38, 31);
+        trackGrad.addColorStop(0, '#020617');
+        trackGrad.addColorStop(0.45, '#1e293b');
+        trackGrad.addColorStop(1, '#020617');
+        ctx.fillStyle = trackGrad;
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1.4;
+        roundRect(-39, -30, 78, 17, 6, true, true);
+        roundRect(-39, 13, 78, 17, 6, true, true);
 
-        const turretGrad = ctx.createLinearGradient(-15, -12, 20, 12);
-        turretGrad.addColorStop(0, lightColor); turretGrad.addColorStop(1, baseColor);
-        ctx.fillStyle = turretGrad; ctx.lineWidth = 1.5;
+        // Bantalan rantai bergerak.
+        const trackOffset = (t.trackDist * 0.62) % 8;
+        ctx.fillStyle = 'rgba(148,163,184,0.42)';
+        for (let i = -38; i <= 42; i += 8) {
+          const x = i - trackOffset;
+          if (x < -41 || x > 38) continue;
+          roundRect(x, -29, 4.2, 15, 1.2, true, false);
+          roundRect(x, 14, 4.2, 15, 1.2, true, false);
+        }
 
+        // Roda kecil di dalam track.
+        for (let x = -28; x <= 28; x += 14) {
+          drawWheel(x, -21.5, 4.6);
+          drawWheel(x, 21.5, 4.6);
+        }
+
+        // Body utama dengan lapisan armor miring.
+        const hullGrad = ctx.createLinearGradient(-34, -21, 34, 21);
+        hullGrad.addColorStop(0, palette.light);
+        hullGrad.addColorStop(0.38, palette.mid);
+        hullGrad.addColorStop(1, palette.dark);
+        ctx.fillStyle = hullGrad;
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.moveTo(-16, -12); ctx.lineTo(12, -12); ctx.lineTo(22, -6); ctx.lineTo(22, 6); ctx.lineTo(12, 12); ctx.lineTo(-16, 12);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.moveTo(-35, -20);
+        ctx.lineTo(17, -22);
+        ctx.lineTo(35, -11);
+        ctx.lineTo(38, 0);
+        ctx.lineTo(35, 11);
+        ctx.lineTo(17, 22);
+        ctx.lineTo(-35, 20);
+        ctx.lineTo(-42, 8);
+        ctx.lineTo(-42, -8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
 
-        ctx.beginPath(); ctx.arc(-4, 4, 5, 0, Math.PI * 2); ctx.fillStyle = '#0f172a'; ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-12, -8); ctx.lineTo(-25, -12); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.stroke();
+        // Plate armor dan highlight.
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(-28, -14); ctx.lineTo(18, -15); ctx.lineTo(29, -8);
+        ctx.moveTo(-28, 14); ctx.lineTo(18, 15); ctx.lineTo(29, 8);
+        ctx.moveTo(-14, -17); ctx.lineTo(-14, 17);
+        ctx.moveTo(13, -19); ctx.lineTo(13, 19);
+        ctx.stroke();
+
+        // Camouflage/tekstur armor ringan.
+        ctx.globalAlpha = 0.20;
+        ctx.fillStyle = isPlayer ? '#052e16' : '#450a0a';
+        ctx.beginPath(); ctx.ellipse(-23, -7, 10, 5, -0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(3, 9, 13, 5, 0.25, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(22, -2, 7, 4, -0.15, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Baut/rivet pada armor.
+        ctx.fillStyle = 'rgba(226,232,240,0.58)';
+        [-28, -10, 10, 28].forEach(x => {
+          ctx.beginPath(); ctx.arc(x, -15.5, 1.7, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(x, 15.5, 1.7, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // Grill mesin belakang.
+        ctx.fillStyle = 'rgba(15,23,42,0.82)';
+        roundRect(-35, -11, 16, 22, 3, true, false);
+        ctx.strokeStyle = 'rgba(148,163,184,0.65)';
+        ctx.lineWidth = 1;
+        for (let y = -7; y <= 7; y += 4) {
+          ctx.beginPath(); ctx.moveTo(-33, y); ctx.lineTo(-21, y); ctx.stroke();
+        }
+        ctx.restore();
+
+        // Turret dan meriam dibuat terpisah supaya arah turret tetap bebas.
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.turretAngle);
+        ctx.translate(-t.recoil, 0);
+
+        // Bayangan meriam.
+        ctx.fillStyle = 'rgba(0,0,0,0.24)';
+        roundRect(13, 1.5, 47, 7, 3, true, false);
+
+        const barrelGrad = ctx.createLinearGradient(0, -5, 0, 5);
+        barrelGrad.addColorStop(0, '#94a3b8');
+        barrelGrad.addColorStop(0.35, '#e2e8f0');
+        barrelGrad.addColorStop(0.65, '#64748b');
+        barrelGrad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = barrelGrad;
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1.2;
+        roundRect(13, -4.2, 47, 8.4, 3, true, true);
+        ctx.fillStyle = '#0f172a';
+        roundRect(55, -6.4, 10, 12.8, 3, true, true);
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(59, -6, 2.2, 12);
+
+        // Mantlet/pelindung pangkal meriam.
+        const mantletGrad = ctx.createLinearGradient(7, -10, 25, 10);
+        mantletGrad.addColorStop(0, palette.light);
+        mantletGrad.addColorStop(1, palette.dark);
+        ctx.fillStyle = mantletGrad;
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1.4;
+        roundRect(8, -9, 20, 18, 5, true, true);
+
+        // Turret utama.
+        const turretGrad = ctx.createRadialGradient(-5, -6, 3, 0, 0, 25);
+        turretGrad.addColorStop(0, palette.light);
+        turretGrad.addColorStop(0.55, palette.base);
+        turretGrad.addColorStop(1, palette.dark);
+        ctx.fillStyle = turretGrad;
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-20, -14);
+        ctx.lineTo(9, -15);
+        ctx.lineTo(25, -7);
+        ctx.lineTo(28, 0);
+        ctx.lineTo(25, 7);
+        ctx.lineTo(9, 15);
+        ctx.lineTo(-20, 14);
+        ctx.lineTo(-27, 6);
+        ctx.lineTo(-27, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Hatch, periskop, dan antena kecil.
+        ctx.fillStyle = 'rgba(15,23,42,0.92)';
+        ctx.beginPath(); ctx.ellipse(-8, 3, 8, 6, 0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(226,232,240,0.42)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#cbd5e1';
+        roundRect(-19, -9, 10, 3.4, 1.5, true, false);
+        ctx.strokeStyle = 'rgba(203,213,225,0.8)';
+        ctx.beginPath(); ctx.moveTo(-20, -12); ctx.lineTo(-31, -22); ctx.stroke();
+
+        // Simbol pangkat kecil menempel pada turret pemain.
         if (isPlayer) {
           ctx.save();
           ctx.translate(1, 0);
@@ -1093,17 +1221,30 @@
         }
         ctx.restore();
 
-        drawHealthBar(t.x - 34, t.y - 52, 68, 8, t.hp);
-        drawAmmoBar(t.x - 34, t.y - 40, 68, 6, t.ammo, t.maxAmmo);
-        if (isPlayer) drawRankBadge(t.x, t.y - 67, getCurrentRank());
+        // Indikator HP dan amunisi tetap di atas tank.
+        drawHealthBar(t.x - 34, t.y - 54, 68, 8, t.hp);
+        drawAmmoBar(t.x - 34, t.y - 42, 68, 6, t.ammo, t.maxAmmo);
+        if (isPlayer) drawRankBadge(t.x, t.y - 70, getCurrentRank());
 
         if (t.ammo <= 0) {
           ctx.fillStyle = '#ef4444';
           ctx.font = 'bold 11px system-ui';
           ctx.textAlign = 'center';
-          ctx.fillText("AMMO 0", t.x, t.y - 59);
+          ctx.fillText('AMMO 0', t.x, t.y - 61);
         }
       }
+
+      function drawWheel(x, y, r) {
+        const grad = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, 1, x, y, r);
+        grad.addColorStop(0, '#94a3b8');
+        grad.addColorStop(0.55, '#334155');
+        grad.addColorStop(1, '#020617');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(x, y, r * 0.42, 0, Math.PI * 2); ctx.fill();
+      }
+
 
       function draw() {
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
