@@ -203,7 +203,7 @@
     }
     .multiplier-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px;
     }
     .multiplier-button,
@@ -336,7 +336,7 @@
         grid-template-columns: 1fr;
       }
       .multiplier-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
       .multiplier-button {
         padding: 12px 8px;
@@ -421,8 +421,8 @@
         <button class="mode-button" id="quizModeBtn" type="button">Ada Soalnya</button>
       </div>
       <div class="multiplier-panel is-disabled" id="multiplierPanel">
-        <div class="multiplier-label">Pilih tabel perkalian untuk soal:</div>
-        <div class="multiplier-grid" id="multiplierGrid" aria-label="Pilihan perkalian 2 sampai 9"></div>
+        <div class="multiplier-label">Pilih tabel perkalian untuk soal (bisa lebih dari satu):</div>
+        <div class="multiplier-grid" id="multiplierGrid" aria-label="Pilihan perkalian 2 sampai 10"></div>
       </div>
       <button class="start-game-button" id="startGameBtn" type="button">Mulai Permainan</button>
     </div>
@@ -490,7 +490,7 @@
 
       let selectedMode = 'play';
       let quizMode = false;
-      let quizMultiplier = 2;
+      let quizMultipliers = [2]; 
       let quizActive = false;
       let currentQuizAnswer = 0;
 
@@ -501,7 +501,8 @@
       
       const powerups = []; 
       const ammoBoxes = []; 
-      let powerupTimer = 10;
+      
+      let powerupTimer = 8;
       let ammoBoxTimer = 5; 
       
       const waypoints = [
@@ -510,7 +511,6 @@
         { x: 100, y: 700 }, { x: 120, y: 400 }, { x: 600, y: 400 }
       ];
       
-      // Rintangan disusun lebih simetris: ada cover, jalur tengah, dan jalur samping yang masih terbuka.
       const obstacles = [
         { x: 190, y: 115, w: 155, h: 58, style: 'bunker' },
         { x: 855, y: 115, w: 155, h: 58, style: 'bunker' },
@@ -580,7 +580,6 @@
       function isHighestRankReached() {
         return getRankIndex() >= HIGHEST_RANK_INDEX;
       }
-
 
       function rankToSvg(rank) {
         const gold = rank.color || '#facc15';
@@ -665,7 +664,6 @@
         rankIconEl.setAttribute('aria-label', rank.name);
       }
 
-
       function setSelectedMode(mode) {
         selectedMode = mode;
         quizMode = mode === 'quiz';
@@ -677,25 +675,37 @@
         });
       }
 
-      function setQuizMultiplier(value) {
-        quizMultiplier = value;
+      function toggleQuizMultiplier(value) {
+        const index = quizMultipliers.indexOf(value);
+        if (index > -1) {
+          if (quizMultipliers.length > 1) { 
+            quizMultipliers.splice(index, 1);
+          }
+        } else {
+          quizMultipliers.push(value);
+        }
+        updateMultiplierUI();
+      }
+
+      function updateMultiplierUI() {
         multiplierGrid.querySelectorAll('button').forEach(btn => {
-          btn.classList.toggle('active', Number(btn.dataset.value) === value);
+          btn.classList.toggle('active', quizMultipliers.includes(Number(btn.dataset.value)));
         });
       }
 
       function buildMultiplierButtons() {
         multiplierGrid.innerHTML = '';
-        for (let n = 2; n <= 9; n++) {
+        for (let n = 2; n <= 10; n++) { 
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'multiplier-button';
           btn.dataset.value = String(n);
           btn.textContent = `×${n}`;
-          btn.addEventListener('click', () => setQuizMultiplier(n));
+          btn.addEventListener('click', () => toggleQuizMultiplier(n));
           multiplierGrid.appendChild(btn);
         }
-        setQuizMultiplier(2);
+        quizMultipliers = [2]; 
+        updateMultiplierUI();
         setSelectedMode('play');
       }
 
@@ -723,10 +733,12 @@
         running = false;
         stopFire();
         stopJoystick();
-        const factor = Math.floor(rand(1, 13));
-        currentQuizAnswer = quizMultiplier * factor;
-        quizText.textContent = `Level ${getRankIndex()} tercapai. Jawab soal perkalian ×${quizMultiplier} untuk melanjutkan.`;
-        quizQuestion.textContent = `${quizMultiplier} × ${factor} = ?`;
+        const activeMultiplier = quizMultipliers[Math.floor(Math.random() * quizMultipliers.length)];
+        const factor = Math.floor(rand(1, 11)); 
+        
+        currentQuizAnswer = activeMultiplier * factor;
+        quizText.textContent = `Level ${getRankIndex()} tercapai. Jawab soal perkalian ×${activeMultiplier} untuk melanjutkan.`;
+        quizQuestion.textContent = `${activeMultiplier} × ${factor} = ?`;
         quizFeedback.textContent = '';
         quizOptions.innerHTML = '';
         makeQuizOptions(currentQuizAnswer).forEach(value => {
@@ -787,13 +799,11 @@
           this.dest = null; this.dead = false;
           this.trackDist = 0; 
           
-          // AI Anti-Stuck Properties
           this.stuckCheckTimer = 0;
           this.lastStuckPos = {x: x, y: y};
           this.reverseTimer = 0;
         }
 
-        // Diperbarui: Kini bergerak lalu membiarkan sistem physics menangani benturan
         moveForward(amount) {
           this.x += Math.cos(this.angle) * amount;
           this.y += Math.sin(this.angle) * amount;
@@ -818,7 +828,7 @@
           if (this.ammo <= 0) {
             if (owner === 'player') {
               playTone(150, 0.1, 'triangle', 0.05); 
-              this.reload = 0.3; 
+              this.reload = 0.25;
             }
             return false;
           }
@@ -835,7 +845,8 @@
             vy: Math.sin(this.turretAngle) * 650,
             owner, life: 1.75, radius: 5
           });
-          this.reload = owner === 'player' ? 0.34 : 0.6;
+          
+          this.reload = owner === 'player' ? 0.25 : 0.5;
           this.recoil = 12;
           
           burst(muzzle.x, muzzle.y, 10, '#fde68a', 140);
@@ -938,7 +949,7 @@
         placeAllEnemiesFarFromPlayer();
         
         bullets.length = 0; particles.length = 0; powerups.length = 0; ammoBoxes.length = 0;
-        powerupTimer = 10; ammoBoxTimer = 5; running = true; modal.classList.remove('show'); updateHud();
+        powerupTimer = 8; ammoBoxTimer = 5; running = true; modal.classList.remove('show'); updateHud(); 
       }
 
       function spawnPowerup() {
@@ -948,7 +959,7 @@
           valid = !obstacles.some(r => circleRect(px, py, 15, r));
         }
         powerups.push({ x: px, y: py, radius: 15, time: 0 });
-        powerupTimer = rand(12, 22);
+        powerupTimer = rand(8, 15);
       }
 
       function spawnAmmoBox() {
@@ -958,11 +969,10 @@
           valid = !obstacles.some(r => circleRect(px, py, 15, r));
         }
         ammoBoxes.push({ x: px, y: py, radius: 15, time: 0 });
-        ammoBoxTimer = rand(8, 15);
+        ammoBoxTimer = rand(6, 12); 
       }
 
       function spawnNewAI(enemy) {
-        if (!running) return;
         const usedSpawns = enemies
           .filter(e => e !== enemy && !e.dead)
           .map(e => ({ x: e.x, y: e.y }));
@@ -1027,7 +1037,6 @@
         return { x: target.x + (target.vx * timeToHit), y: target.y + (target.vy * timeToHit) };
       }
 
-      // ==== FUNGSI PENGHINDARAN RINTANGAN CERDAS AI ====
       function avoidObstacles(tank, dt) {
         const probeDist = 75; 
         const checkProbe = (angleOffset) => {
@@ -1038,7 +1047,6 @@
             return false;
         };
         
-        // 5 titik sensor
         const centerHit = checkProbe(0);
         const leftHit1 = checkProbe(-Math.PI / 6);
         const rightHit1 = checkProbe(Math.PI / 6);
@@ -1046,31 +1054,27 @@
         const rightHit2 = checkProbe(Math.PI / 3);
 
         if (centerHit || leftHit1 || rightHit1 || leftHit2 || rightHit2) {
-            // Evaluasi sisi mana yang lebih longgar
             let leftScore = (leftHit1 ? 1 : 0) + (leftHit2 ? 1 : 0);
             let rightScore = (rightHit1 ? 1 : 0) + (rightHit2 ? 1 : 0);
             
             if (leftScore < rightScore) {
-                tank.angle -= dt * 6.0; // Belok kiri (kiri lebih kosong)
+                tank.angle -= dt * 6.0;
             } else if (rightScore < leftScore) {
-                tank.angle += dt * 6.0; // Belok kanan (kanan lebih kosong)
+                tank.angle += dt * 6.0;
             } else {
-                tank.angle += tank.strafeDir * dt * 6.0; // Pakai strafe direction
+                tank.angle += tank.strafeDir * dt * 6.0;
             }
             return true;
         }
         return false;
       }
 
-      // ==== SISTEM FISIKA MELUNCUR (WALL SLIDING) ====
       function resolveSolidCollisions(t) {
-        // 1. Batas Peta (Bouncing/Sliding Map Edge)
         if (t.x < t.radius) t.x = t.radius;
         if (t.x > WORLD.w - t.radius) t.x = WORLD.w - t.radius;
         if (t.y < t.radius) t.y = t.radius;
         if (t.y > WORLD.h - t.radius) t.y = WORLD.h - t.radius;
 
-        // 2. Halangan (Obstacles - Mulus meluncur)
         for (let r of obstacles) {
             let testX = clamp(t.x, r.x, r.x + r.w);
             let testY = clamp(t.y, r.y, r.y + r.h);
@@ -1079,14 +1083,11 @@
             let distY = t.y - testY;
             let distance = Math.hypot(distX, distY);
             
-            // Jika ada tumpang tindih
             if (distance > 0 && distance < t.radius) {
                 let overlap = t.radius - distance;
-                // Dorong keluar secara tegak lurus
                 t.x += (distX / distance) * overlap;
                 t.y += (distY / distance) * overlap;
             } 
-            // Edge case: Pusat tank masuk murni ke dalam kotak
             else if (distance === 0) {
                 let dl = t.x - r.x;
                 let dr = (r.x + r.w) - t.x;
@@ -1148,7 +1149,6 @@
         updatePlayer(dt); 
         updateEnemies(dt);
         
-        // Panggil fisika resolusi
         resolveSolidCollisions(player);
         enemies.forEach(e => resolveSolidCollisions(e));
         resolveTankCollisions();
@@ -1235,29 +1235,22 @@
             enemy.prevX = enemy.x; enemy.prevY = enemy.y;
             enemy.trackDist += Math.hypot(enemy.vx, enemy.vy) * dt;
 
-            // ==== SISTEM AI ANTI-NYANGKUT (ANTI-STUCK) ====
             if (enemy.reverseTimer > 0) {
-                // AI Sedang membebaskan diri (mundur & putar)
                 enemy.reverseTimer -= dt;
-                enemy.moveForward(-100 * dt); // Mundur
-                enemy.angle += dt * 3.0; // Spin / Putar Arah
-                
-                // Terus arahkan turret ke player jika kelihatan
+                enemy.moveForward(-100 * dt); 
+                enemy.angle += dt * 3.0; 
                 if (aiCanSeePlayer(enemy)) enemy.aimAt(player, dt);
-                return; // Skip normal logic
+                return; 
             }
             
-            // Cek apakah AI bergerak atau nyangkut
             enemy.stuckCheckTimer += dt;
-            if (enemy.stuckCheckTimer > 1.0) { // Cek tiap 1 detik
+            if (enemy.stuckCheckTimer > 1.0) {
                 if (dist(enemy, enemy.lastStuckPos) < 15 && enemy.state !== 'PATROL_IDLE') {
-                    // Posisi kurang dari 15px dalam 1 detik = NYANGKUT!
-                    enemy.reverseTimer = 0.8; // Aktifkan mode mundur selama 0.8 detik
+                    enemy.reverseTimer = 0.8;
                 }
                 enemy.lastStuckPos = {x: enemy.x, y: enemy.y};
                 enemy.stuckCheckTimer = 0;
             }
-            // ===============================================
 
             const visible = aiCanSeePlayer(enemy);
             const d = dist(enemy, player);
@@ -1296,10 +1289,9 @@
               enemy.strafeTimer -= dt; if (enemy.strafeTimer <= 0) { enemy.strafeDir *= -1; enemy.strafeTimer = rand(1.0, 3.0); }
               let targetAngle;
               
-              // Smart Strafe Logic
-              if (d > 260) targetAngle = angleTo(enemy, player); // Mendekat
-              else if (d < 150) targetAngle = angleTo(enemy, player) + Math.PI; // Menjauh jika terlalu dekat
-              else targetAngle = angleTo(enemy, player) + (Math.PI / 2.2) * enemy.strafeDir; // Strafe serong
+              if (d > 260) targetAngle = angleTo(enemy, player); 
+              else if (d < 150) targetAngle = angleTo(enemy, player) + Math.PI; 
+              else targetAngle = angleTo(enemy, player) + (Math.PI / 2.2) * enemy.strafeDir; 
               
               enemy.angle = lerpAngle(enemy.angle, targetAngle, dt * 5.0);
               avoidObstacles(enemy, dt); 
@@ -1342,7 +1334,8 @@
                   renderRankIconInScoreboard();
                   if (quizMode) showLevelQuestion(rank);
                 }
-                triggerShake(0.3, 10); setTimeout(() => spawnNewAI(hitTank), 2000);
+                triggerShake(0.3, 10); 
+                setTimeout(() => spawnNewAI(hitTank), 3000);
             }
             explosion(b.x, b.y, 35); triggerShake(0.15, hitTank === player ? 8 : 4); bullets.splice(i, 1);
           } else if (hitWall || out || b.life <= 0) {
@@ -1407,7 +1400,6 @@
               armor: '#991b1b', trim: '#fecaca', track: '#111827', wheel: '#334155', emblem: '#fca5a5'
             };
 
-        // Bayangan lembut agar tank tampak menempel pada tanah.
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.rotate(t.angle);
@@ -1417,7 +1409,7 @@
         ctx.fill();
         ctx.restore();
 
-        // Badan dan rantai tank.
+        // Menggambar Badan & Track Tank
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.rotate(t.angle);
@@ -1432,7 +1424,6 @@
         roundRect(-39, -30, 78, 17, 6, true, true);
         roundRect(-39, 13, 78, 17, 6, true, true);
 
-        // Bantalan rantai bergerak.
         const trackOffset = (t.trackDist * 0.62) % 8;
         ctx.fillStyle = 'rgba(148,163,184,0.42)';
         for (let i = -38; i <= 42; i += 8) {
@@ -1442,13 +1433,11 @@
           roundRect(x, 14, 4.2, 15, 1.2, true, false);
         }
 
-        // Roda kecil di dalam track.
         for (let x = -28; x <= 28; x += 14) {
           drawWheel(x, -21.5, 4.6);
           drawWheel(x, 21.5, 4.6);
         }
 
-        // Body utama dengan lapisan armor miring.
         const hullGrad = ctx.createLinearGradient(-34, -21, 34, 21);
         hullGrad.addColorStop(0, palette.light);
         hullGrad.addColorStop(0.38, palette.mid);
@@ -1460,7 +1449,7 @@
         ctx.moveTo(-35, -20);
         ctx.lineTo(17, -22);
         ctx.lineTo(35, -11);
-        ctx.lineTo(38, 0);
+        ctx.lineTo(38, 0); // Ujung depan tengah
         ctx.lineTo(35, 11);
         ctx.lineTo(17, 22);
         ctx.lineTo(-35, 20);
@@ -1470,7 +1459,6 @@
         ctx.fill();
         ctx.stroke();
 
-        // Plate armor dan highlight.
         ctx.strokeStyle = 'rgba(255,255,255,0.18)';
         ctx.lineWidth = 1.1;
         ctx.beginPath();
@@ -1480,7 +1468,6 @@
         ctx.moveTo(13, -19); ctx.lineTo(13, 19);
         ctx.stroke();
 
-        // Camouflage/tekstur armor ringan.
         ctx.globalAlpha = 0.20;
         ctx.fillStyle = isPlayer ? '#052e16' : '#450a0a';
         ctx.beginPath(); ctx.ellipse(-23, -7, 10, 5, -0.35, 0, Math.PI * 2); ctx.fill();
@@ -1488,30 +1475,61 @@
         ctx.beginPath(); ctx.ellipse(22, -2, 7, 4, -0.15, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Baut/rivet pada armor.
         ctx.fillStyle = 'rgba(226,232,240,0.58)';
-        [-28, -10, 10, 28].forEach(x => {
+        [-28, -10, 10, 24].forEach(x => {
           ctx.beginPath(); ctx.arc(x, -15.5, 1.7, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(x, 15.5, 1.7, 0, Math.PI * 2); ctx.fill();
         });
 
         // Grill mesin belakang.
         ctx.fillStyle = 'rgba(15,23,42,0.82)';
-        roundRect(-35, -11, 16, 22, 3, true, false);
+        roundRect(-37, -12, 16, 24, 3, true, false);
         ctx.strokeStyle = 'rgba(148,163,184,0.65)';
-        ctx.lineWidth = 1;
-        for (let y = -7; y <= 7; y += 4) {
-          ctx.beginPath(); ctx.moveTo(-33, y); ctx.lineTo(-21, y); ctx.stroke();
+        ctx.lineWidth = 1.2;
+        for (let y = -8; y <= 8; y += 4) {
+          ctx.beginPath(); ctx.moveTo(-35, y); ctx.lineTo(-23, y); ctx.stroke();
         }
+
+        // ==========================================
+        // PENANDA DEPAN & BELAKANG TANK
+        // ==========================================
+
+        // 1. Lampu Depan (Putih bersinar terang)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        ctx.shadowBlur = 10;
+        roundRect(31, -16, 4, 6, 1.5, true, false);
+        roundRect(31, 10, 4, 6, 1.5, true, false);
+        ctx.shadowBlur = 0;
+        
+        // 2. Marka Chevron di bodi depan menunjuk arah maju
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath();
+        ctx.moveTo(15, -6);
+        ctx.lineTo(25, 0); // Ujung panah
+        ctx.lineTo(15, 6);
+        ctx.lineTo(18, 0); // Bagian belakang panah ditarik sedikit
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Lampu Belakang / Rem (Merah Menyala)
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+        ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
+        ctx.shadowBlur = 8;
+        roundRect(-42, -18, 3, 6, 1, true, false);
+        roundRect(-42, 12, 3, 6, 1, true, false);
+        ctx.shadowBlur = 0;
+
+        // ==========================================
+
         ctx.restore();
 
-        // Turret dan meriam dibuat terpisah supaya arah turret tetap bebas.
+        // Turret dan meriam
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.rotate(t.turretAngle);
         ctx.translate(-t.recoil, 0);
 
-        // Bayangan meriam.
         ctx.fillStyle = 'rgba(0,0,0,0.24)';
         roundRect(13, 1.5, 47, 7, 3, true, false);
 
@@ -1529,7 +1547,6 @@
         ctx.fillStyle = '#475569';
         ctx.fillRect(59, -6, 2.2, 12);
 
-        // Mantlet/pelindung pangkal meriam.
         const mantletGrad = ctx.createLinearGradient(7, -10, 25, 10);
         mantletGrad.addColorStop(0, palette.light);
         mantletGrad.addColorStop(1, palette.dark);
@@ -1538,7 +1555,6 @@
         ctx.lineWidth = 1.4;
         roundRect(8, -9, 20, 18, 5, true, true);
 
-        // Turret utama.
         const turretGrad = ctx.createRadialGradient(-5, -6, 3, 0, 0, 25);
         turretGrad.addColorStop(0, palette.light);
         turretGrad.addColorStop(0.55, palette.base);
@@ -1560,7 +1576,6 @@
         ctx.fill();
         ctx.stroke();
 
-        // Hatch, periskop, dan antena kecil.
         ctx.fillStyle = 'rgba(15,23,42,0.92)';
         ctx.beginPath(); ctx.ellipse(-8, 3, 8, 6, 0.2, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(226,232,240,0.42)'; ctx.lineWidth = 1; ctx.stroke();
@@ -1569,7 +1584,6 @@
         ctx.strokeStyle = 'rgba(203,213,225,0.8)';
         ctx.beginPath(); ctx.moveTo(-20, -12); ctx.lineTo(-31, -22); ctx.stroke();
 
-        // Simbol pangkat kecil menempel pada turret pemain.
         if (isPlayer) {
           ctx.save();
           ctx.translate(1, 0);
@@ -1578,7 +1592,6 @@
         }
         ctx.restore();
 
-        // Indikator HP dan amunisi tetap di atas tank.
         drawHealthBar(t.x - 34, t.y - 54, 68, 8, t.hp);
         drawAmmoBar(t.x - 34, t.y - 42, 68, 6, t.ammo, t.maxAmmo);
         if (isPlayer) drawRankBadge(t.x, t.y - 70, getCurrentRank());
@@ -1679,7 +1692,6 @@
           ctx.lineWidth = 3;
           roundRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, 8, false, true);
 
-          // Garis sambungan beton agar rintangan terlihat seperti blok arena.
           ctx.strokeStyle = 'rgba(15,23,42,0.34)';
           ctx.lineWidth = 1.5;
           const step = r.w > r.h ? 42 : 36;
@@ -1693,7 +1705,6 @@
             }
           }
 
-          // Pita kuning-hitam sebagai penanda cover.
           ctx.save();
           ctx.beginPath();
           roundRect(r.x + 4, r.y + 4, r.w - 8, r.h - 8, 7, false, false);
