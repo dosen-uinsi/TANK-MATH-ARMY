@@ -131,6 +131,131 @@
     }
     .modal-card h2 { margin: 0 0 12px; font-size: 32px; color: white;}
     .modal-card p { margin: 0 0 24px; color: var(--muted); font-size: 16px; }
+    .start-modal,
+    .quiz-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(3, 7, 18, 0.78);
+      text-align: center;
+      padding: 20px;
+      z-index: 60;
+    }
+    .start-modal.show,
+    .quiz-modal.show { display: grid; }
+    .setup-card,
+    .quiz-card {
+      width: min(560px, calc(100vw - 28px));
+      padding: 28px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.48);
+    }
+    .setup-card h2,
+    .quiz-card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 5vw, 34px);
+      color: white;
+    }
+    .setup-card p,
+    .quiz-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .mode-button {
+      min-height: 58px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(30, 41, 59, 0.92);
+      color: #f8fafc;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px rgba(0,0,0,0.24);
+    }
+    .mode-button.active {
+      background: linear-gradient(135deg, #f59e0b, #facc15);
+      color: #111827;
+      border-color: rgba(254,243,199,0.72);
+    }
+    .multiplier-panel {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0 22px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.46);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    .multiplier-panel.is-disabled {
+      opacity: 0.42;
+      filter: grayscale(0.6);
+    }
+    .multiplier-label {
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+    .multiplier-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .multiplier-button,
+    .quiz-option {
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(30, 41, 59, 0.88);
+      color: #f8fafc;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18);
+    }
+    .multiplier-button.active {
+      background: linear-gradient(135deg, #22c55e, #86efac);
+      color: #052e16;
+      border-color: rgba(187,247,208,0.75);
+    }
+    .start-game-button {
+      width: 100%;
+      font-size: 17px;
+    }
+    .quiz-question {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 210px;
+      min-height: 62px;
+      margin: 6px 0 18px;
+      padding: 12px 22px;
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid rgba(250,204,21,0.36);
+      color: #fde68a;
+      font-size: clamp(28px, 7vw, 42px);
+      font-weight: 900;
+      letter-spacing: 0.03em;
+    }
+    .quiz-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .quiz-option {
+      min-height: 62px;
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .quiz-feedback {
+      min-height: 24px;
+      margin-top: 14px;
+      color: #fca5a5;
+      font-weight: 800;
+    }
+
     button {
       appearance: none; border: 0; padding: 14px 24px; border-radius: 12px;
       background: var(--accent); color: #111827; font-weight: 800; font-size: 16px;
@@ -201,6 +326,30 @@
     .fire-mobile.is-pressing,
     .fire-mobile:active { background: rgba(239, 68, 68, 0.9); opacity: 0.96; transform: scale(0.95); }
 
+    @media (max-width: 520px) {
+      .setup-card,
+      .quiz-card {
+        padding: 22px 16px;
+        border-radius: 20px;
+      }
+      .mode-buttons {
+        grid-template-columns: 1fr;
+      }
+      .multiplier-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .multiplier-button {
+        padding: 12px 8px;
+      }
+      .quiz-options {
+        gap: 9px;
+      }
+      .quiz-option {
+        min-height: 58px;
+        font-size: 22px;
+      }
+    }
+
     @media (hover: hover) and (pointer: fine) {
       #joystickZone,
       .fire-mobile { display: none; }
@@ -263,6 +412,32 @@
     <canvas id="game" aria-label="Tank Battles game canvas"></canvas>
   </main>
 
+  <div class="start-modal show" id="startModal">
+    <div class="setup-card">
+      <h2>Mode Permainan</h2>
+      <p>Pilih bermain biasa atau bermain sambil latihan perkalian. Jika memakai soal, kuis pilihan ganda akan muncul setiap naik level.</p>
+      <div class="mode-buttons" aria-label="Pilihan mode permainan">
+        <button class="mode-button active" id="playOnlyBtn" type="button">Bermain Saja</button>
+        <button class="mode-button" id="quizModeBtn" type="button">Ada Soalnya</button>
+      </div>
+      <div class="multiplier-panel is-disabled" id="multiplierPanel">
+        <div class="multiplier-label">Pilih tabel perkalian untuk soal:</div>
+        <div class="multiplier-grid" id="multiplierGrid" aria-label="Pilihan perkalian 2 sampai 9"></div>
+      </div>
+      <button class="start-game-button" id="startGameBtn" type="button">Mulai Permainan</button>
+    </div>
+  </div>
+
+  <div class="quiz-modal" id="quizModal">
+    <div class="quiz-card">
+      <h2>Naik Level!</h2>
+      <p id="quizText">Jawab soal untuk melanjutkan permainan.</p>
+      <div class="quiz-question" id="quizQuestion">2 × 3 = ?</div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+    </div>
+  </div>
+
   <div class="center-modal" id="modal">
     <div class="modal-card">
       <h2 id="modalTitle">Game Over</h2>
@@ -293,6 +468,17 @@
       const modalTitle = document.getElementById('modalTitle');
       const modalText = document.getElementById('modalText');
       const restartBtn = document.getElementById('restartBtn');
+      const startModal = document.getElementById('startModal');
+      const playOnlyBtn = document.getElementById('playOnlyBtn');
+      const quizModeBtn = document.getElementById('quizModeBtn');
+      const multiplierPanel = document.getElementById('multiplierPanel');
+      const multiplierGrid = document.getElementById('multiplierGrid');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const quizModal = document.getElementById('quizModal');
+      const quizText = document.getElementById('quizText');
+      const quizQuestion = document.getElementById('quizQuestion');
+      const quizOptions = document.getElementById('quizOptions');
+      const quizFeedback = document.getElementById('quizFeedback');
 
       const joystickZone = document.getElementById('joystickZone');
       const joystickStick = document.getElementById('joystickStick');
@@ -301,6 +487,12 @@
       let joystickCenter = { x: 0, y: 0 };
       let maxJoyDist = 35;
       let fireHoldTimer = null;
+
+      let selectedMode = 'play';
+      let quizMode = false;
+      let quizMultiplier = 2;
+      let quizActive = false;
+      let currentQuizAnswer = 0;
 
       const WORLD = { w: 1200, h: 800 };
       const keys = new Set();
@@ -333,7 +525,7 @@
 
       let dpr = 1, scale = 1, offsetX = 0, offsetY = 0;
       let lastTime = performance.now();
-      let running = true;
+      let running = false;
       let audioCtx = null;
       let score = 0;
       let shakeTime = 0, shakeMagnitude = 0;
@@ -471,6 +663,104 @@
         rankIconEl.innerHTML = rankToSvg(rank);
         rankIconEl.title = rank.name;
         rankIconEl.setAttribute('aria-label', rank.name);
+      }
+
+
+      function setSelectedMode(mode) {
+        selectedMode = mode;
+        quizMode = mode === 'quiz';
+        playOnlyBtn.classList.toggle('active', mode === 'play');
+        quizModeBtn.classList.toggle('active', mode === 'quiz');
+        multiplierPanel.classList.toggle('is-disabled', mode !== 'quiz');
+        multiplierGrid.querySelectorAll('button').forEach(btn => {
+          btn.disabled = mode !== 'quiz';
+        });
+      }
+
+      function setQuizMultiplier(value) {
+        quizMultiplier = value;
+        multiplierGrid.querySelectorAll('button').forEach(btn => {
+          btn.classList.toggle('active', Number(btn.dataset.value) === value);
+        });
+      }
+
+      function buildMultiplierButtons() {
+        multiplierGrid.innerHTML = '';
+        for (let n = 2; n <= 9; n++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'multiplier-button';
+          btn.dataset.value = String(n);
+          btn.textContent = `×${n}`;
+          btn.addEventListener('click', () => setQuizMultiplier(n));
+          multiplierGrid.appendChild(btn);
+        }
+        setQuizMultiplier(2);
+        setSelectedMode('play');
+      }
+
+      function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function makeQuizOptions(correct) {
+        const options = new Set([correct]);
+        while (options.size < 4) {
+          const delta = Math.floor(rand(-12, 13));
+          const candidate = Math.max(0, correct + delta);
+          if (candidate !== correct) options.add(candidate);
+        }
+        return shuffleArray([...options]);
+      }
+
+      function showLevelQuestion(rank) {
+        if (!quizMode) return;
+        quizActive = true;
+        running = false;
+        stopFire();
+        stopJoystick();
+        const factor = Math.floor(rand(1, 13));
+        currentQuizAnswer = quizMultiplier * factor;
+        quizText.textContent = `Level ${getRankIndex()} tercapai. Jawab soal perkalian ×${quizMultiplier} untuk melanjutkan.`;
+        quizQuestion.textContent = `${quizMultiplier} × ${factor} = ?`;
+        quizFeedback.textContent = '';
+        quizOptions.innerHTML = '';
+        makeQuizOptions(currentQuizAnswer).forEach(value => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quiz-option';
+          btn.textContent = value;
+          btn.addEventListener('click', () => answerQuiz(value));
+          quizOptions.appendChild(btn);
+        });
+        quizModal.classList.add('show');
+      }
+
+      function answerQuiz(value) {
+        if (value !== currentQuizAnswer) {
+          quizFeedback.textContent = 'Belum tepat. Coba lagi.';
+          playTone(150, 0.10, 'triangle', 0.05);
+          return;
+        }
+        quizFeedback.textContent = 'Benar! Lanjut bertempur.';
+        playTone(520, 0.08, 'sine', 0.05);
+        setTimeout(() => playTone(760, 0.10, 'sine', 0.05), 80);
+        quizActive = false;
+        quizModal.classList.remove('show');
+        lastTime = performance.now();
+        running = true;
+        checkGameEnd();
+      }
+
+      function startGameFromMenu() {
+        quizMode = selectedMode === 'quiz';
+        initAudio();
+        startModal.classList.remove('show');
+        resetGame();
       }
 
       function getClosestItem(entity, arr) {
@@ -635,6 +925,11 @@
       function triggerShake(duration, magnitude) { shakeTime = duration; shakeMagnitude = magnitude; }
 
       function resetGame() {
+        quizActive = false;
+        quizModal.classList.remove('show');
+        quizFeedback.textContent = '';
+        stopFire();
+        stopJoystick();
         score = 0; scoreVal.textContent = score;
         player.x = 100; player.y = 400; player.prevX = player.x; player.prevY = player.y; 
         player.angle = 0; player.turretAngle = 0; player.hp = 100; player.dead = false; player.dest = null;
@@ -1045,6 +1340,7 @@
                   playTone(620, 0.10, 'triangle', 0.06);
                   setTimeout(() => playTone(860, 0.12, 'triangle', 0.06), 90);
                   renderRankIconInScoreboard();
+                  if (quizMode) showLevelQuestion(rank);
                 }
                 triggerShake(0.3, 10); setTimeout(() => spawnNewAI(hitTank), 2000);
             }
@@ -1663,13 +1959,19 @@
       window.addEventListener('orientationchange', resize);
       window.addEventListener('contextmenu', e => e.preventDefault());
       window.addEventListener('keydown', e => {
-        const k = e.key.toLowerCase(); if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
-        initAudio(); if (k === ' ') player.fire('player'); keys.add(k);
+        const k = e.key.toLowerCase();
+        if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+        initAudio();
+        if (!running) return;
+        if (k === ' ') player.fire('player');
+        keys.add(k);
       });
       window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
       canvas.addEventListener('pointerdown', e => {
         if (e.target.closest('#joystickZone') || e.target.closest('#fireMobile')) return;
-        initAudio(); const p = screenToWorld(e.clientX, e.clientY);
+        initAudio();
+        if (!running) return;
+        const p = screenToWorld(e.clientX, e.clientY);
         if (p.x >= 0 && p.x <= WORLD.w && p.y >= 0 && p.y <= WORLD.h) player.dest = p;
       });
       restartBtn.addEventListener('click', () => { initAudio(); resetGame(); });
@@ -1677,6 +1979,7 @@
       const startFire = (e) => {
         e.preventDefault();
         initAudio();
+        if (!running) return;
         fireMobile.classList.add('is-pressing');
         player.fire('player');
         clearInterval(fireHoldTimer);
@@ -1694,7 +1997,9 @@
       fireMobile.addEventListener('pointerleave', stopFire);
 
       const startJoystick = (e) => {
-        e.preventDefault(); initAudio(); joystickData.active = true;
+        e.preventDefault(); initAudio();
+        if (!running) return;
+        joystickData.active = true;
         refreshControlMetrics();
         joystickZone.classList.add('active');
         const rect = joystickZone.getBoundingClientRect();
@@ -1719,6 +2024,11 @@
       joystickZone.addEventListener('pointerdown', startJoystick); window.addEventListener('pointermove', moveJoystick);
       window.addEventListener('pointerup', stopJoystick); window.addEventListener('pointercancel', stopJoystick);
       window.addEventListener('blur', () => { stopJoystick(); stopFire(); keys.clear(); });
+
+      buildMultiplierButtons();
+      playOnlyBtn.addEventListener('click', () => setSelectedMode('play'));
+      quizModeBtn.addEventListener('click', () => setSelectedMode('quiz'));
+      startGameBtn.addEventListener('click', startGameFromMenu);
 
       resize(); updateHud(); requestAnimationFrame(loop);
     })();
